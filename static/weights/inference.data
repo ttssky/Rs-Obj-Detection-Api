@@ -1,4 +1,0 @@
-classes=14
-valid=/data/htwy_proj/aircraft-object-detection-api/python-api/data/images_path.txt
-names=/data/htwy_proj/aircraft-object-detection-api/python-api/models/configs/classes.names
-results=/data/htwy_proj/aircraft-object-detection-api/python-api/results/infer_res_txt
