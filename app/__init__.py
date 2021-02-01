@@ -4,7 +4,7 @@ from flask_cors import CORS
 from flask_marshmallow import Marshmallow
 from flask_sqlalchemy import SQLAlchemy
 
-ma = Marshmallow()
+# ma = Marshmallow()
 cors = CORS()
 db = SQLAlchemy()
 
@@ -15,7 +15,7 @@ def create_app(config_name):
 
     #TODO其它应用初始化app
     db.init_app(app)
-    ma.init_app(app)
+    # ma.init_app(app)
     cors.init_app(app)
 
     from .main import main as main_blueprint

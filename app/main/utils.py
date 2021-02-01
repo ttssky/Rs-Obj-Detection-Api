@@ -6,10 +6,12 @@ import cv2
 import numpy as np
 import random
 import time
+from shapely import wkb
 
 from .core import add_geo_coords_to_df
 from .core import post_process_create_df
 from .core import refine_df
+from ..models import create_Idataset_model
 
 def load_images(images_path):
 
@@ -19,6 +21,52 @@ def load_images(images_path):
 
     else:
         raise ValueError
+
+def generate_ims_path_txt(txt, ims_dir):
+    ims_path = glob(os.path.join(ims_dir, '*.png'))
+    with open(txt, 'w') as f:
+        for path in ims_path:
+            f.write(path + '\n')
+    f.close()
+
+def query_image_meta(idataset, bbox):
+
+    out = [el for el in idataset.query.all()]
+    all_w_h = [(el.width, el.height) for el in out]
+    all_bounds = [wkb.loads(str(el.geom), hex=True).bounds for el in out]
+    for w_h,bounds in zip(all_w_h,all_bounds):
+        x_min, y_min, x_max, y_max = bounds
+        if (x_min < bbox[0] and y_min < bbox[1]) or \
+            (x_max > bbox[2] and y_max > bbox[3]):
+            w = w_h[0]
+            h = w_h[1]
+            sp_res = (((bounds[2] - bounds[0]) / w) + \
+                ((bounds[3] - bounds[1]) / h)) / 2
+            return w_h[0], w_h[1], sp_res
+    else:
+        raise ValueError
+
+# def generate_net_cfg(base_cfg, height, width):
+def generate_infer_data(data_path, txt_path, res_dir, names_path):
+    with open(names_path, 'r') as f:
+        classes_num = len(f.readlines())
+    with open(data_path, 'w') as f:
+        file_data = "classes={num}\n".format(num=classes_num) + \
+        "valid={valid_path}\n".format(valid_path=txt_path) + \
+        "names={names_path}\n".format(names_path=names_path) + \
+        "results={results}".format(results=res_dir)
+        f.write(file_data)
+
+def generate_net_cfg(base_cfg, res_cfg, batch_size, height, width):
+
+    with open(base_cfg, 'r') as f:
+        cfgfile = f.read()
+        cfgfile = cfgfile.replace('batch=1', 'batch=%s' % (batch_size))
+        cfgfile = cfgfile.replace('height=608', 'height=%s' % (height))
+        cfgfile = cfgfile.replace('width=608', 'width=%s' % (width))
+    with open(res_cfg, 'w') as f:
+        f.write(cfgfile)
+    
 
 def image_detection(image_path, network, class_names, class_colors, thresh):
     # Darknet doesn't accept numpy images.
@@ -115,7 +163,7 @@ def get_nms_add_geos_geojson(df,
     )
 
     df_, json = add_geo_coords_to_df(
-        df, 
+        df_res, 
         create_geojson=create_geojson, 
         Proj_str=Proj_str
     )

@@ -7,15 +7,13 @@ from flask import current_app, make_response, request, make_response, \
     jsonify, redirect, current_app, abort
 
 from config import *
-from ..models import Idataset
-from .utils import inference
-# @main.before_app_request
-# def request_images_from_heycloud():
-#     json = jsonify(request.get_json('test'))
-#     return None
+from ..models import create_Idataset_model
+from .utils import inference, generate_ims_path_txt, \
+    query_image_meta, generate_infer_data, generate_net_cfg
 
-@main.route('/detection/aircraft', methods=['POST'])
-def info():
+
+@main.route('/detection/<category>', methods=['POST'])
+def detection(category):
     if request.content_type == 'application/json':
         args = dict(request.get_json(force=True))
     else:
@@ -25,11 +23,73 @@ def info():
         }
         args['bbox'] = [float(el) for el in args['bbox'][1:-1].split(',')]
 
-    SLICE_HEIGHT = args['height'] if args.get('height') is not None else 608
-    SLICE_WIDTH = args['width'] if args.get('width') is not None else 608
-    SP_SLICE_HEIGHT = SLICE_HEIGHT * SP_RES
-    SP_SLICE_WIDTH = SLICE_WIDTH * SP_RES
+    #idataset model
+    query_table_name = 't_%s' % (args['idatasetId'])
+    idataset = create_Idataset_model(query_table_name)
 
+    #image config
+    image_width, image_height, sp_res = query_image_meta(idataset, args['bbox'])
+    slice_height = args['height'] if args.get('height') is not None else 608
+    slice_width = args['width'] if args.get('width') is not None else 608
+    slice_overlap = args['slice_overlap'] if args.get('slice_overlap') is not None else 0.3
+    sp_slice_height = slice_height * sp_res
+    sp_slice_width = slice_width * sp_res
+
+    #netfile config
+    batch_size = args['batch_size'] if args.get('batch_size') is not None else 1
+    location = args['location']
+
+    #model and config path
+    base_dir = os.path.join(
+        dl_detection_dir, 
+        category,
+        location
+    )
+
+    file_base_dir = os.path.join(base_dir, 'files', uid)
+    weights_base_dir = os.path.join(base_dir, 'weights', model_ver)
+
+    infer_images_dir = os.path.join(file_base_dir, 'images')
+    if not os.path.exists(infer_images_dir):
+        os.makedirs(infer_images_dir)
+
+    infer_txt_path = os.path.join(file_base_dir, 'images_path.txt')
+    infer_data_path = os.path.join(file_base_dir, 'inference.data')
+    infer_res_dir = os.path.join(file_base_dir, 'results')
+    if not os.path.exists(infer_images_dir):
+        os.makedirs(infer_images_dir)
+
+    infer_res_txt_dir = os.path.join(infer_res_dir, 'darknet_infer_res')
+    if not os.path.exists(infer_res_txt_dir):
+        os.makedirs(infer_res_txt_dir)
+
+    infer_classes_names_path = os.path.join(base_dir, category + '.names')
+    generate_infer_data(
+        infer_data_path,
+        infer_txt_path,
+        infer_res_dir,
+        infer_classes_names_path
+    )
+    
+    
+    infer_weights_path = os.path.join(weights_base_dir, name_prefix + \
+        '-' + category + '-' + location +'.weights')
+    infer_weights_base_cfg_path = os.path.join(weights_base_dir, 'base.cfg')
+    infer_weights_cfg_path = os.path.join(file_base_dir, name_prefix + \
+        '-' + category + '.cfg')
+    generate_net_cfg(
+        infer_weights_base_cfg_path,
+        infer_weights_cfg_path,
+        batch_size,
+        slice_height,
+        slice_width
+    )
+
+    #post process config
+    nms_thresh = args['nms_thresh'] if args.get('nms_thresh') is not None else 0.5
+    conf_thresh = args['conf_thresh'] if args.get('conf_thresh') is not None else 0.25
+   
+    #request slice images config
     cfg = current_app.config
     width_min = args['bbox'][0]
     height_min = args['bbox'][1]
@@ -38,52 +98,57 @@ def info():
     post_params = {
         "bbox": [],
         "bands": [0,1,2],
-        "height": SLICE_HEIGHT,
-        "width": SLICE_WIDTH
+        "height": slice_height,
+        "width": slice_width
 
     }
 
     headers = cfg['IMAGE_REQUEST_HEADERS']
     request_url = cfg['IMAGE_REQUEST_HOST'] +  \
                 '/heycloud/api/data/idataset' + \
-                '/37605aef-913e-40b6-8859-822e72a51a19' + \
+                '/%s' % (args['idatasetId']) + \
                 '/extract'
 
-    # threads = multiThreadRequest(INFER_IMAGE_PATH,
-    #                     height_min,
-    #                     width_min,
-    #                     height_max,
-    #                     width_max,
-    #                     SLICE_HEIGHT,
-    #                     SLICE_WIDTH,
-    #                     SP_SLICE_HEIGHT,
-    #                     SP_SLICE_WIDTH,
-    #                     IMAGE_HEIGHT,
-    #                     IMAGE_WIDTH,
-    #                     SLICE_OVERLAP,
-    #                     post_params,
-    #                     request_url,
-    #                     headers
-    #                     )
+
+    threads = multiThreadRequest(infer_images_dir,
+                        height_min,
+                        width_min,
+                        height_max,
+                        width_max,
+                        slice_height,
+                        slice_width,
+                        sp_slice_height,
+                        sp_slice_width,
+                        image_height,
+                        image_width,
+                        slice_overlap,
+                        post_params,
+                        request_url,
+                        headers
+                        )
     start = time.time()
    
-    # for th in threads:
-    #     th.setDaemon(True)
-    #     th.start()
-    # for t in threads:
-    #     t.join()
+    for th in threads:
+        th.setDaemon(True)
+        th.start()
+    for t in threads:
+        t.join()
     print("\n[INFO] total request time: %ss\n" % round(time.time()-start, 2))
 
-    json = inference(NET_CONFIG_FILE, 
-              INFER_DATA_FILE, 
-              WEIGHTS, BATCH_SIZE, 
-              IMAGE_PATH_TXT, 
-              INFER_RES_TXT,
-              CONF_THRESH, 
-              SP_RES, 
+    del idataset
+
+    generate_ims_path_txt(infer_txt_path, infer_images_dir)    
+
+    json = inference(infer_weights_cfg_path, 
+              infer_data_path, 
+              infer_weights_path, batch_size, 
+              infer_txt_path, 
+              infer_res_txt_dir,
+              conf_thresh, 
+              sp_res, 
               args['bbox'], 
-              NMS_THRESH, 
-              INFER_RES_PATH)
+              nms_thresh, 
+              infer_res_dir)
 
     return json
 
@@ -98,8 +163,10 @@ def test():
         }
         args['bbox'] = [float(el) for el in args['bbox'][1:-1].split(',')]
 
-    # peter = Idataset.query.filter_by(id='test').first_or_404(description='There is no data with {}'.format('test'))
-    # print(Idataset.file)
-    abort(404)
-    return str(request.accept_mimetypes.accept_json)
+    Idataset = create_Idataset_model('t_37605aef-913e-40b6-8859-822e72a51a19')
+
+    peter = Idataset.query.all()
+    print(peter)
+    # abort(404)
+    return str(Idataset.geom)
 

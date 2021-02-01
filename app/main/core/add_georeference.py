@@ -67,12 +67,12 @@ def add_geo_coords_to_df(df_, Proj_str='epsg:3857',
     # 创建geodataframe
     #   https://gis.stackexchange.com/questions/174159/convert-a-pandas-dataframe-to-a-geodataframe
     if create_geojson and (len(out_arr_json) > 0):
-        crs_init = {'init': Proj_str}
+        # crs_init = {'init': Proj_str}
         df_json = pd.DataFrame(out_arr_json, columns=['geometry'])
         # 为geodataframe创建必要的字段
         df_json['category'] = df_['Category'].values
         df_json['prob'] = df_['Prob'].values
-        gdf = gpd.GeoDataFrame(df_json, crs=crs_init, geometry=out_arr_json)
+        gdf = gpd.GeoDataFrame(df_json, crs=Proj_str.upper(), geometry=out_arr_json)
         json_out = gdf
         # json_out = gdf.to_json()
     else:
@@ -115,13 +115,13 @@ def get_row_geo_coords(row,
     if Proj_str.lower() == 'epsg:3857':
         outProj = pyproj.Proj(init='epsg:4326')
         x0_wmp, y0_wmp, x1_wmp, y1_wmp = poly_geo.bounds  
-        lon0, lat0 = pyproj.transform(inProj, outProj, x0_wmp, y0_wmp)
-        lon1, lat1 = pyproj.transform(inProj, outProj, x1_wmp, y1_wmp)
+        lon0, lat0 = pyproj.transform(inProj, outProj, x0_wmp, y0_wmp, always_xy=True)
+        lon1, lat1 = pyproj.transform(inProj, outProj, x1_wmp, y1_wmp, always_xy=True)
     else:
         outProj = pyproj.Proj(init='epsg:3857')
         lon0, lat0, lon1, lat1 = poly_geo.bounds  
-        x0_wmp, y0_wmp = pyproj.transform(inProj, outProj, lon0, lat0)
-        x1_wmp, y1_wmp = pyproj.transform(inProj, outProj, lon1, lat1)
+        x0_wmp, y0_wmp = pyproj.transform(inProj, outProj, lon0, lat0, always_xy=True)
+        x1_wmp, y1_wmp = pyproj.transform(inProj, outProj, lon1, lat1, always_xy=True)
       
     if verbose:
         print("idx,  x0, y0, x1, y1:", row.values[0], x0, y0, x1, y1)
