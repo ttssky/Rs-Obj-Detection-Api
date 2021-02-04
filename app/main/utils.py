@@ -36,8 +36,8 @@ def query_image_meta(idataset, bbox):
     all_bounds = [wkb.loads(str(el.geom), hex=True).bounds for el in out]
     for w_h,bounds in zip(all_w_h,all_bounds):
         x_min, y_min, x_max, y_max = bounds
-        if (x_min < bbox[0] and y_min < bbox[1]) or \
-            (x_max > bbox[2] and y_max > bbox[3]):
+        if (x_min <= bbox[0] and y_min <= bbox[1]) or \
+            (x_max >= bbox[2] and y_max >= bbox[3]):
             w = w_h[0]
             h = w_h[1]
             sp_res = (((bounds[2] - bounds[0]) / w) + \
@@ -143,9 +143,6 @@ def post_process(
         bbox=bbox,
         rotate_boxes=rotate_boxes)
 
-
-    df_tot.to_csv('test.csv', index=False)
-    print(type(df_tot))
     return df_tot
 
 def get_nms_add_geos_geojson(df,

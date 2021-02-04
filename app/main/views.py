@@ -2,7 +2,8 @@ from app.main import main
 from app.main import multiThreadRequest
 import json
 import time
-# from .utils import *
+import hashlib
+
 from flask import current_app, make_response, request, make_response, \
     jsonify, redirect, current_app, abort
 
@@ -29,6 +30,7 @@ def detection(category):
 
     #image config
     image_width, image_height, sp_res = query_image_meta(idataset, args['bbox'])
+    print("\nres:\n%s" % (sp_res))
     slice_height = args['height'] if args.get('height') is not None else 608
     slice_width = args['width'] if args.get('width') is not None else 608
     slice_overlap = args['slice_overlap'] if args.get('slice_overlap') is not None else 0.3
@@ -37,16 +39,33 @@ def detection(category):
 
     #netfile config
     batch_size = args['batch_size'] if args.get('batch_size') is not None else 1
-    location = args['location']
+    location = args['location'] if args.get('location') is not None else None
+    
+    if location is not None:
+        base_dir = os.path.join(
+            dl_detection_dir, 
+            category,
+            location
+        )
+       
+    else:
+        base_dir = os.path.join(
+            dl_detection_dir, 
+            category
+        )
 
-    #model and config path
-    base_dir = os.path.join(
-        dl_detection_dir, 
-        category,
-        location
-    )
+    md5 = hashlib.md5()
+    md5.update(category.encode('utf-8'))
+    for value in args.values():
+        md5.update(str(value).encode('utf-8'))
+    uid = md5.hexdigest()
 
     file_base_dir = os.path.join(base_dir, 'files', uid)
+    if not os.path.exists(file_base_dir):
+        os.makedirs(file_base_dir)
+    else:
+        raise ValueError
+
     weights_base_dir = os.path.join(base_dir, 'weights', model_ver)
 
     infer_images_dir = os.path.join(file_base_dir, 'images')
@@ -71,12 +90,18 @@ def detection(category):
         infer_classes_names_path
     )
     
-    
-    infer_weights_path = os.path.join(weights_base_dir, name_prefix + \
-        '-' + category + '-' + location +'.weights')
+    if location is not None:
+        infer_weights_path = os.path.join(weights_base_dir, name_prefix + \
+            '-' + category + '-' + location +'.weights')
+    else:
+        infer_weights_path = os.path.join(weights_base_dir, name_prefix + \
+            '-' + category +'.weights')
+
     infer_weights_base_cfg_path = os.path.join(weights_base_dir, 'base.cfg')
     infer_weights_cfg_path = os.path.join(file_base_dir, name_prefix + \
         '-' + category + '.cfg')
+
+
     generate_net_cfg(
         infer_weights_base_cfg_path,
         infer_weights_cfg_path,
