@@ -12,7 +12,7 @@ from ..models import create_Idataset_model
 from .utils import inference, generate_ims_path_txt, \
     query_image_meta, generate_infer_data, generate_net_cfg
 
-
+created_models = {}
 @main.route('/detection/<category>', methods=['POST'])
 def detection(category):
     if request.content_type == 'application/json':
@@ -26,10 +26,11 @@ def detection(category):
 
     #idataset model
     query_table_name = 't_%s' % (args['idatasetId'])
-    idataset = create_Idataset_model(query_table_name)
+    if created_models.get(query_table_name) is None:
+        created_models[query_table_name] = create_Idataset_model(query_table_name)
 
     #image config
-    image_width, image_height, sp_res = query_image_meta(idataset, args['bbox'])
+    image_width, image_height, sp_res = query_image_meta(created_models[query_table_name], args['bbox'])
     print("\nres:\n%s" % (sp_res))
     slice_height = args['height'] if args.get('height') is not None else 608
     slice_width = args['width'] if args.get('width') is not None else 608
@@ -63,8 +64,8 @@ def detection(category):
     file_base_dir = os.path.join(base_dir, 'files', uid)
     if not os.path.exists(file_base_dir):
         os.makedirs(file_base_dir)
-    else:
-        raise ValueError
+    # else:
+    #     raise ValueError
 
     weights_base_dir = os.path.join(base_dir, 'weights', model_ver)
 
@@ -160,7 +161,6 @@ def detection(category):
         t.join()
     print("\n[INFO] total request time: %ss\n" % round(time.time()-start, 2))
 
-    del idataset
 
     generate_ims_path_txt(infer_txt_path, infer_images_dir)    
 
@@ -177,21 +177,22 @@ def detection(category):
 
     return json
 
-@main.route('/test', methods=['POST'])
+@main.route('/test', methods=['POST', 'GET'])
 def test():
-    if request.content_type == 'application/json':
-        args = dict(request.get_json(force=True))
-    else:
-        args = {
-            key: value[0] if len(value) == 1 else value
-            for key, value in request.form.items()
-        }
-        args['bbox'] = [float(el) for el in args['bbox'][1:-1].split(',')]
+    print(created_models)
+    # if request.content_type == 'application/json':
+    #     args = dict(request.get_json(force=True))
+    # else:
+    #     args = {
+    #         key: value[0] if len(value) == 1 else value
+    #         for key, value in request.form.items()
+    #     }
+    #     args['bbox'] = [float(el) for el in args['bbox'][1:-1].split(',')]
 
-    Idataset = create_Idataset_model('t_37605aef-913e-40b6-8859-822e72a51a19')
+    # Idataset = create_Idataset_model('t_37605aef-913e-40b6-8859-822e72a51a19')
 
-    peter = Idataset.query.all()
-    print(peter)
-    # abort(404)
-    return str(Idataset.geom)
+    # peter = Idataset.query.all()
+    # print(peter)
+    # # abort(404)
+    # return str(Idataset.geom)
 

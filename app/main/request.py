@@ -67,19 +67,22 @@ def _bytes_to_images(response, save_path, *args, **kwargs):
         b1 = arr[size:2*size]
         b2 = arr[2*size:3*size]
 
-        img0 = Image.frombytes(mode="L",size=(608,608),data=b0,decoder_name="raw")
-        img1 = Image.frombytes(mode="L",size=(608,608),data=b1,decoder_name="raw")
-        img2 = Image.frombytes(mode="L",size=(608,608),data=b2,decoder_name="raw")
+        img0 = Image.frombytes(mode="L",size=(kwargs['height'],kwargs['width']),data=b0,decoder_name="raw")
+        img1 = Image.frombytes(mode="L",size=(kwargs['height'],kwargs['width']),data=b1,decoder_name="raw")
+        img2 = Image.frombytes(mode="L",size=(kwargs['height'],kwargs['width']),data=b2,decoder_name="raw")
 
         Image.merge("RGB", (img0, img1, img2)).save(save_path)
     else:
         print(response.content)
 
-def _async_request(request_url, params, headers, callback=None, save_path='', **kwargs):
+def _async_request(request_url, params, headers, height, width, callback=None, save_path='', **kwargs):
+
     if callback:
         def callback_with_args(response, *args, **kwargs):
             print(save_path)
             kwargs['save_path'] = save_path
+            kwargs['height'] = height
+            kwargs['width'] = width
             callback(response, *args, **kwargs)
         kwargs['hooks'] = {'response': callback_with_args}
 
@@ -128,8 +131,11 @@ def multiThreadRequest(ims_dir,
             threads.append(_async_request(request_url,
                                           json.dumps(post_params),
                                           post_headers,
+                                          slice_height,
+                                          slice_width,
                                           callback=_bytes_to_images,
-                                          save_path=path))
+                                          save_path=path
+                                        ))
         except:
             continue
 
