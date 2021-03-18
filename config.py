@@ -2,22 +2,31 @@ import os
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-request_image_host = 'http://192.168.31.17'
-port = 9000
+image_request_heycloud_host = 'http://192.168.31.17' #获取预测影像的heycloud-data-api地址
+port = 9000 #获取预测影像的heycloud-data-api的端口号
 
-method = 'yolov4'
-model_ver = 'v0.0.1'
-name_prefix = method + '-' + model_ver
+#存储影像信息的sqlalchemy格式pg地址
+db_sqlalchemy_addr = 'postgresql+psycopg2://postgres:postgres@192.168.31.17:15432/heycloud'
+
+#目标检测预测模型信息
+det_method = 'yolov4' #目标检测方法
+det_model_ver = 'v0.0.1'
+det_name_prefix = det_method + '-' + det_model_ver
 dl_detection_dir = '/home/geohey/volumes/dl-detection/'
+
+#语义分割模型信息
+seg_method = 'efficientnet-b4' #语义分割方法
+seg_model_ver = 'v0.0.1'
+seg_name_prefix = seg_method + '-' + seg_model_ver
 dl_segmentation_dir = '/home/geohey/volumes/dl-segmentation/'
 
-uid = 'test'
+
 # image config
 
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'hard to guess string'
-    IMAGE_REQUEST_HOST = "http://192.168.31.17:9000"
+    IMAGE_REQUEST_HOST = image_request_heycloud_host + ':' + str(port)
     IMAGE_REQUEST_HEADERS = {
         "x-heycloud-admin-session": "tFn8aWIgWHnYTCO/NR/r2OK4wef96gtC",
         "Content-Type":"application/json"

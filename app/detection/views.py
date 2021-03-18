@@ -1,5 +1,5 @@
-from app.main import main
-from app.main import multiThreadRequest
+from app.detection import detection
+from app.detection import multiThreadRequest
 import json
 import time
 import hashlib
@@ -13,8 +13,8 @@ from .utils import inference, generate_ims_path_txt, \
     query_image_meta, generate_infer_data, generate_net_cfg
 
 created_models = {}
-@main.route('/detection/<category>', methods=['POST'])
-def detection(category):
+@detection.route('/detection/<category>', methods=['POST'])
+def inference_proc(category):
     if request.content_type == 'application/json':
         args = dict(request.get_json(force=True))
     else:
@@ -64,8 +64,6 @@ def detection(category):
     file_base_dir = os.path.join(base_dir, 'files', uid)
     if not os.path.exists(file_base_dir):
         os.makedirs(file_base_dir)
-    # else:
-    #     raise ValueError
 
     weights_base_dir = os.path.join(base_dir, 'weights', model_ver)
 
@@ -92,16 +90,15 @@ def detection(category):
     )
     
     if location is not None:
-        infer_weights_path = os.path.join(weights_base_dir, name_prefix + \
+        infer_weights_path = os.path.join(weights_base_dir, det_name_prefix + \
             '-' + category + '-' + location +'.weights')
     else:
-        infer_weights_path = os.path.join(weights_base_dir, name_prefix + \
+        infer_weights_path = os.path.join(weights_base_dir, det_name_prefix + \
             '-' + category +'.weights')
 
     infer_weights_base_cfg_path = os.path.join(weights_base_dir, 'base.cfg')
-    infer_weights_cfg_path = os.path.join(file_base_dir, name_prefix + \
+    infer_weights_cfg_path = os.path.join(file_base_dir, det_name_prefix + \
         '-' + category + '.cfg')
-
 
     generate_net_cfg(
         infer_weights_base_cfg_path,
@@ -177,8 +174,22 @@ def detection(category):
 
     return json
 
-@main.route('/test', methods=['POST', 'GET'])
-def test():
+@detection.route('/segmentation/<category>', methods=['POST', 'GET'])
+def segmentation(category):
+    if request.content_type == 'application/json':
+        args = dict(request.get_json(force=True))
+    
+    else:
+        args = {
+            key: value[0] if len(value) == 1 else value
+            for key, value in request.form.items()
+        }
+
+    #idataset model
+    query_table_name = 't_%s' % (args['idatasetId'])
+    if created_models.get(query_table_name) is None:
+        created_models[query_table_name] = create_Idataset_model(query_table_name)
+
     print(created_models)
     # if request.content_type == 'application/json':
     #     args = dict(request.get_json(force=True))

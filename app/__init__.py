@@ -18,8 +18,8 @@ def create_app(config_name):
     # ma.init_app(app)
     cors.init_app(app)
 
-    from .main import main as main_blueprint
-    app.register_blueprint(main_blueprint)
+    from .detection import detection as detection_blueprint
+    app.register_blueprint(detection_blueprint)
 
     #TODO其它蓝图
 

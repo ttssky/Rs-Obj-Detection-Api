@@ -1,4 +1,3 @@
-from app.main import multiThreadRequest
 from app import create_app
 
 
