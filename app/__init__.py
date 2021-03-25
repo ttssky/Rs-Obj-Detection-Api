@@ -21,6 +21,9 @@ def create_app(config_name):
     from .detection import detection as detection_blueprint
     app.register_blueprint(detection_blueprint)
 
+    from .segmentation import segmentation as segmentation_blueprint
+    app.register_blueprint(segmentation_blueprint)
+
     #TODO其它蓝图
 
     return app

@@ -65,7 +65,7 @@ def inference_proc(category):
     if not os.path.exists(file_base_dir):
         os.makedirs(file_base_dir)
 
-    weights_base_dir = os.path.join(base_dir, 'weights', model_ver)
+    weights_base_dir = os.path.join(base_dir, 'weights', det_model_ver)
 
     infer_images_dir = os.path.join(file_base_dir, 'images')
     if not os.path.exists(infer_images_dir):
@@ -174,23 +174,7 @@ def inference_proc(category):
 
     return json
 
-@detection.route('/segmentation/<category>', methods=['POST', 'GET'])
-def segmentation(category):
-    if request.content_type == 'application/json':
-        args = dict(request.get_json(force=True))
-    
-    else:
-        args = {
-            key: value[0] if len(value) == 1 else value
-            for key, value in request.form.items()
-        }
 
-    #idataset model
-    query_table_name = 't_%s' % (args['idatasetId'])
-    if created_models.get(query_table_name) is None:
-        created_models[query_table_name] = create_Idataset_model(query_table_name)
-
-    print(created_models)
     # if request.content_type == 'application/json':
     #     args = dict(request.get_json(force=True))
     # else:

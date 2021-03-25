@@ -28,7 +28,7 @@ def _extract_windows(ims_dir,
     save_path = []
     while y0 < height_max :
         while x0 < width_max:
-
+            
             n_ims += 1
             if (n_ims % 50 == 0):
                 print(n_ims)
@@ -40,12 +40,12 @@ def _extract_windows(ims_dir,
                 x = width_max - sp_slice_width
             else:
                 x = x0
+
             window_extract = [x, y, x + sp_slice_width, y + sp_slice_height]
 
-           
             outpath = os.path.join(
                 ims_dir,
-                'test' + '__' + str(y) + '_' + str(x) + '_'
+                'image' + '__' + str(y) + '_' + str(x) + '_'
                 + str(slice_height) + '_' + str(slice_width)
                 + '_' + '0' + '_' + str(image_width) + '_' + str(image_height)
                 + '.png')

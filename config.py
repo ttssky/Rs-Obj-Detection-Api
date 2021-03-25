@@ -20,9 +20,7 @@ seg_model_ver = 'v0.0.1'
 seg_name_prefix = seg_method + '-' + seg_model_ver
 dl_segmentation_dir = '/home/geohey/volumes/dl-segmentation/'
 
-
-# image config
-
+#Flask app配置
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'hard to guess string'
