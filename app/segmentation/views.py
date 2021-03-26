@@ -171,7 +171,7 @@ def inference_proc(category):
 
         name,image  = batch
         x_tensor = image.to(device)
-        pr_mask = model.module.predict(x_tensor)
+        pr_mask = model.predict(x_tensor)
         pr_mask = (pr_mask.squeeze().cpu().numpy().round())
         pr_mask = np.argmax(pr_mask, axis=0).astype(np.uint8)
 

@@ -46,7 +46,6 @@ def query_image_meta(idataset, bbox):
     else:
         raise ValueError
 
-# def generate_net_cfg(base_cfg, height, width):
 def generate_infer_data(data_path, txt_path, res_dir, names_path):
     with open(names_path, 'r') as f:
         classes_num = len(f.readlines())
@@ -117,8 +116,8 @@ def post_process(
             #  testims_dir_tot='', #测试图像的路径
              infer_classes_files_dir='', #darknet输出的txt,每个类别对应一个txt
              test_slice_sep='__',
-             edge_buffer_test=3, #距离边界的阈值
-             max_edge_aspect_ratio=3,
+             edge_buffer_test=1, #距离边界的阈值
+             max_edge_aspect_ratio=2.5,
              test_box_rescale_frac=1.0,
              sp_res=0,
              bbox=[],
@@ -220,11 +219,12 @@ def inference(net_config_file,
         index += 1
  
     df_post_process = post_process(
-                                            infer_classes_files_dir=infer_res_txt_dir,
-                                            sp_res=sp_res,
-                                            bbox=bbox,
-                                            edge_buffer_test=3
-                                            )
+                                        infer_classes_files_dir=infer_res_txt_dir,
+                                        sp_res=sp_res,
+                                        bbox=bbox,
+                                        edge_buffer_test=1
+                                        )
+    
     json = get_nms_add_geos_geojson(df=df_post_process, 
     save_dir=results_dir, 
     nms_thresh=nms_thresh,
